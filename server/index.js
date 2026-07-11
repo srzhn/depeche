@@ -33,5 +33,5 @@ const server = http.createServer(app);
 attachSignaling(server);
 
 server.listen(PORT, () => {
-  console.log(`[govorilka] слушаю http://localhost:${PORT}`);
+  console.log(`[depeche] слушаю http://localhost:${PORT}`);
 });

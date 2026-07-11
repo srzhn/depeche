@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Разворачивает говорилку на ГОЛОМ сервере (чистая Ubuntu/Debian) с Windows-машины по SSH.
+  Разворачивает depeche (говорилку) на ГОЛОМ сервере (чистая Ubuntu/Debian) с Windows-машины по SSH.
 
 .DESCRIPTION
   Подключается к серверу, при необходимости ставит git, клонирует репозиторий и запускает
@@ -43,7 +43,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Write-Host "== Развёртывание говорилки на $User@$Server ==" -ForegroundColor Cyan
+Write-Host "== Развёртывание depeche на $User@$Server ==" -ForegroundColor Cyan
 
 # Пароль/креды спрашиваем безопасно и нигде не сохраняем.
 $cred = Get-Credential -UserName $User -Message "Пароль SSH для $User@$Server"

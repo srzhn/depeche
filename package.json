@@ -1,8 +1,8 @@
 {
-  "name": "govorilka",
+  "name": "depeche",
   "version": "1.0.0",
   "private": true,
-  "description": "Самохостящаяся веб-говорилка на WebRTC (P2P mesh)",
+  "description": "depeche — самохостящаяся говорилка (голосовой чат) на WebRTC (P2P mesh)",
   "type": "module",
   "main": "server/index.js",
   "engines": {

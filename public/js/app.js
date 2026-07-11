@@ -28,7 +28,7 @@ const state = {
 // ─────────── Инициализация экрана входа ───────────
 const pageUrl = new URL(location.href);
 el.roomInput.value = pageUrl.searchParams.get('room') || '';
-el.nameInput.value = localStorage.getItem('govorilka:name') || '';
+el.nameInput.value = localStorage.getItem('depeche:name') || '';
 
 el.joinBtn.addEventListener('click', join);
 el.roomInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') el.nameInput.focus(); });
@@ -64,7 +64,7 @@ async function join() {
 
   state.roomName = room;
   state.myName = name;
-  localStorage.setItem('govorilka:name', name);
+  localStorage.setItem('depeche:name', name);
 
   // Обновляем адрес в строке браузера, чтобы им можно было делиться.
   pageUrl.searchParams.set('room', room);

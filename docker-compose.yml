@@ -1,10 +1,10 @@
-# Говорилка: приложение + Caddy (авто-HTTPS) + coturn (STUN/TURN).
+# depeche: приложение + Caddy (авто-HTTPS) + coturn (STUN/TURN).
 # Все настройки берутся из .env (см. .env.example).
 
 services:
   app:
     build: .
-    image: govorilka-app
+    image: depeche-app
     restart: unless-stopped
     environment:
       PORT: "3000"
