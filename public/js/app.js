@@ -41,6 +41,7 @@ async function join() {
 
   el.joinBtn.disabled = true;
   hideJoinError();
+  console.log('[join] старт: комната=%o, имя=%o, secureContext=%o', room, name, window.isSecureContext);
 
   // 1) Микрофон. Доступен только в защищённом контексте (https:// или localhost).
   if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -56,6 +57,8 @@ async function join() {
     showJoinError(micErrorText(err));
     return;
   }
+
+  console.log('[join] микрофон получен');
 
   // 2) ICE-серверы (STUN/TURN)
   let iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
@@ -94,9 +97,11 @@ async function join() {
   state.signaling.connect();
 
   // 4) UI комнаты
+  console.log('[join] открываю экран комнаты');
   el.roomName.textContent = room;
   hide(el.join);
   show(el.room);
+  console.log('[join] готово: join.hidden=%o, room.hidden=%o', el.join.hidden, el.room.hidden);
   setupLocalVad();
   wireControls();
 }

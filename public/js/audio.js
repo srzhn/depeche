@@ -23,12 +23,28 @@ export class LocalAudio {
   }
 
   async start() {
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: this._constraints(),
-      video: false,
-    });
+    this.stream = await this._acquire();
     this._applyMute();
     return this.stream;
+  }
+
+  // Запрашиваем микрофон с таймаутом (чтобы не «висло» молча) и запасным
+  // вариантом на простые constraints, если полные не поддержаны браузером/устройством.
+  async _acquire() {
+    const withTimeout = (promise, ms) => Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new DOMException('Микрофон не ответил за отведённое время', 'TimeoutError')), ms)),
+    ]);
+    try {
+      console.log('[mic] getUserMedia (полные constraints)…');
+      return await withTimeout(
+        navigator.mediaDevices.getUserMedia({ audio: this._constraints(), video: false }), 12000);
+    } catch (err) {
+      console.warn('[mic] полные constraints не сработали, пробую audio:true', err && err.name, err);
+      return await withTimeout(
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false }), 12000);
+    }
   }
 
   _applyMute() {
