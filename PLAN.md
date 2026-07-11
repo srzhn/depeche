@@ -1,4 +1,8 @@
-# Говорилка — план реализации
+# depeche — план реализации
+
+> **Статус:** реализовано и развёрнуто. Фазы 0–4 готовы, проект работает на VPS
+> (Docker: app + Caddy + coturn, HTTPS через Let's Encrypt). Осталась опциональная Фаза 5.
+> depeche — это говорилка (голосовой чат) на WebRTC.
 
 ## Контекст
 
@@ -44,12 +48,13 @@
 
 ## Фазы
 
-- **Фаза 0** — каркас: package.json, .gitignore, скелет папок.
-- **Фаза 1** — сигналинг-сервер: `server/index.js`, `server/signaling.js`, `server/turn.js`.
-- **Фаза 2** — фронт MVP: вход + WebRTC mesh (две вкладки слышат друг друга).
-- **Фаза 3** — UI и фичи: мут, тумблер шумодава, список участников, индикатор речи, push-to-talk.
-- **Фаза 4** — деплой: Dockerfile, docker-compose, Caddyfile, coturn, bash-скрипты, README.
-- **Фаза 5** (позже) — RNNoise WASM, громкость по участнику, авто-реконнект пиров.
+- ✅ **Фаза 0** — каркас: package.json, .gitignore, скелет папок.
+- ✅ **Фаза 1** — сигналинг-сервер: `server/index.js`, `server/signaling.js`, `server/turn.js`.
+- ✅ **Фаза 2** — фронт MVP: вход + WebRTC mesh (две вкладки слышат друг друга).
+- ✅ **Фаза 3** — UI и фичи: мут, тумблер шумодава, список участников, индикатор речи, push-to-talk.
+- ✅ **Фаза 4** — деплой: Dockerfile, docker-compose, Caddyfile, coturn, bash-скрипты, README;
+  плюс `scripts/provision.sh` (установка на голый сервер) и `deploy.ps1` (bootstrap с Windows).
+- ⬜ **Фаза 5** (опционально) — RNNoise WASM, громкость по участнику, авто-реконнект пиров.
 
 ## Протокол сигналинга (WebSocket, JSON)
 
@@ -62,9 +67,10 @@
 
 ## Что нужно для боевого запуска
 
-- Домен + A-запись на IP VPS.
-- Порты: `80`, `443`, `3478` TCP/UDP, диапазон UDP `49160–49200`.
-- `.env` из `.env.example`: `DOMAIN`, `TURN_SECRET` (`openssl rand -hex 32`), `TURN_REALM`, `TURN_URLS`.
+- Голый Linux-VPS (Ubuntu/Debian) — Docker/compose/swap ставит `scripts/provision.sh` сам.
+- Домен по желанию: без него берётся бесплатный `<публичный-IP>.sslip.io` с настоящим HTTPS.
+- Порты `80`, `443`, `3478` TCP/UDP, диапазон UDP `49160–49200` (если включён файрвол).
+- `.env` создаётся автоматически (`provision.sh` генерирует `TURN_SECRET`); вручную — из `.env.example`.
 
 ## Проверка
 
