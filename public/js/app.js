@@ -42,13 +42,18 @@ async function join() {
   el.joinBtn.disabled = true;
   hideJoinError();
 
-  // 1) Микрофон
+  // 1) Микрофон. Доступен только в защищённом контексте (https:// или localhost).
+  if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    el.joinBtn.disabled = false;
+    showJoinError('Микрофон недоступен: открой сайт по HTTPS (адрес должен начинаться с https://), а не по http или по голому IP.');
+    return;
+  }
   try {
     await state.audio.start();
   } catch (err) {
-    console.error(err);
+    console.error('[mic]', err);
     el.joinBtn.disabled = false;
-    showJoinError('Нет доступа к микрофону. Разреши доступ в браузере и попробуй снова.');
+    showJoinError(micErrorText(err));
     return;
   }
 
@@ -287,6 +292,21 @@ function show(node) { node.hidden = false; }
 function hide(node) { node.hidden = true; }
 function showJoinError(text) { el.joinError.textContent = text; el.joinError.hidden = false; }
 function hideJoinError() { el.joinError.hidden = true; }
+function micErrorText(err) {
+  switch (err && err.name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'Доступ к микрофону запрещён. Разреши микрофон для сайта (значок 🔒 в адресной строке) и попробуй снова.';
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return 'Микрофон не найден. Подключи микрофон и попробуй снова.';
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'Микрофон занят другим приложением (Zoom, Meet и т.п.). Закрой его и попробуй снова.';
+    default:
+      return 'Не удалось получить микрофон: ' + ((err && (err.name || err.message)) || 'неизвестная ошибка') + '.';
+  }
+}
 function initial(name) { return (name || '?').trim().charAt(0).toUpperCase() || '?'; }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => (
