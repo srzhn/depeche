@@ -1,0 +1,4 @@
+# Скрипты для Linux-сервера всегда с LF, даже если репозиторий клонируют на Windows
+* text=auto
+*.sh text eol=lf
+Caddyfile text eol=lf

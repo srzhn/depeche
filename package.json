@@ -1,0 +1,19 @@
+{
+  "name": "govorilka",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Самохостящаяся веб-говорилка на WebRTC (P2P mesh)",
+  "type": "module",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}

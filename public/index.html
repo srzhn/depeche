@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Говорилка</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%99%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <!-- ─────────── Экран входа ─────────── -->
+  <main id="join" class="screen">
+    <div class="card">
+      <h1 class="logo">🎙️ Говорилка</h1>
+      <p class="subtitle">Заходи в комнату и болтай с друзьями голосом.</p>
+
+      <label class="field">
+        <span>Комната</span>
+        <input id="room-input" type="text" placeholder="например, kitchen" autocomplete="off" spellcheck="false" />
+      </label>
+
+      <label class="field">
+        <span>Твоё имя</span>
+        <input id="name-input" type="text" placeholder="как тебя зовут?" maxlength="32" autocomplete="off" />
+      </label>
+
+      <button id="join-btn" class="primary">Войти в комнату</button>
+      <p id="join-error" class="error" hidden></p>
+      <p class="hint">Понадобится доступ к микрофону. Лучше в наушниках — без эха.</p>
+    </div>
+  </main>
+
+  <!-- ─────────── Экран комнаты ─────────── -->
+  <main id="room" class="screen" hidden>
+    <header class="room-header">
+      <div class="room-title">
+        <span class="room-label">Комната</span>
+        <strong id="room-name" class="room-name"></strong>
+      </div>
+      <button id="copy-link" class="ghost" title="Скопировать ссылку-приглашение">🔗 Пригласить</button>
+    </header>
+
+    <ul id="participants" class="participants"></ul>
+
+    <!-- Сюда добавляются скрытые <audio> удалённых участников -->
+    <div id="audio-sink" hidden aria-hidden="true"></div>
+
+    <button id="enable-audio" class="enable-audio" hidden>🔊 Нажми, чтобы включить звук</button>
+
+    <div class="controls">
+      <button id="mute-btn" class="control" aria-pressed="false" title="Заглушить микрофон (или зажми пробел для push-to-talk)">
+        <span class="ico">🎤</span><span class="lbl">Микрофон</span>
+      </button>
+      <button id="noise-btn" class="control on" aria-pressed="true" title="Шумоподавление">
+        <span class="ico">🌿</span><span class="lbl">Шумодав</span>
+      </button>
+      <button id="leave-btn" class="control danger" title="Выйти из комнаты">
+        <span class="ico">📴</span><span class="lbl">Выйти</span>
+      </button>
+    </div>
+    <p class="ptt-hint">Зажми <kbd>пробел</kbd> — говорить, пока держишь (push-to-talk)</p>
+  </main>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

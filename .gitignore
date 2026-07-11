@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.log
+npm-debug.log*
+
+# Данные Caddy/coturn при локальном docker-запуске
+caddy_data/
+caddy_config/

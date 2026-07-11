@@ -1,0 +1,7 @@
+# Caddy автоматически выпустит и обновит TLS-сертификат Let's Encrypt для домена.
+# reverse_proxy сам корректно проксирует WebSocket-апгрейд (/ws).
+
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}

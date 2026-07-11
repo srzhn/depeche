@@ -1,0 +1,65 @@
+# Говорилка: приложение + Caddy (авто-HTTPS) + coturn (STUN/TURN).
+# Все настройки берутся из .env (см. .env.example).
+
+services:
+  app:
+    build: .
+    image: govorilka-app
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      STUN_URLS: ${STUN_URLS:-stun:stun.l.google.com:19302}
+      TURN_URLS: ${TURN_URLS:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+      TURN_TTL: ${TURN_TTL:-86400}
+    expose:
+      - "3000"
+    networks:
+      - web
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+
+  # coturn запускаем в сети хоста — так проще всего с relay-портами.
+  coturn:
+    image: coturn/coturn:4.6
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TURN_REALM: ${TURN_REALM:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+      EXTERNAL_IP: ${EXTERNAL_IP:-}
+    # Аргументы собираем в shell, чтобы EXTERNAL_IP добавлялся только если задан.
+    # $$VAR — это переменная окружения контейнера (экранирование от подстановки compose).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        ARGS="-n --log-file=stdout --fingerprint --use-auth-secret"
+        ARGS="$$ARGS --realm=$$TURN_REALM --static-auth-secret=$$TURN_SECRET"
+        ARGS="$$ARGS --listening-port=3478 --min-port=49160 --max-port=49200"
+        ARGS="$$ARGS --no-tls --no-dtls --no-cli"
+        if [ -n "$$EXTERNAL_IP" ]; then ARGS="$$ARGS --external-ip=$$EXTERNAL_IP"; fi
+        echo "[coturn] turnserver $$ARGS"
+        exec turnserver $$ARGS
+
+networks:
+  web:
+
+volumes:
+  caddy_data:
+  caddy_config:
