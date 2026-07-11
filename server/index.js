@@ -21,11 +21,16 @@ app.get('/api/ice', (_req, res) => {
   res.json({ iceServers: getIceServers() });
 });
 
-// Статика фронтенда.
-app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
+// Статика фронтенда. no-cache = браузер каждый раз сверяется с сервером (ETag),
+// поэтому обновления кода подхватываются сразу, без застрявшего старого JS.
+app.use(express.static(PUBLIC_DIR, {
+  extensions: ['html'],
+  setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
+}));
 
 // Всё остальное отдаём index.html — чтобы ссылки вида /?room=xxx работали.
 app.get('*', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
