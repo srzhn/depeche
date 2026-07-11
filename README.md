@@ -25,7 +25,36 @@ npm run dev
 
 ---
 
-## Боевой запуск на VPS (Linux + Docker)
+## Боевой запуск на VPS
+
+### 🚀 Самый быстрый путь — один скрипт (голый сервер)
+
+На **чистой** Ubuntu/Debian ничего ставить руками не нужно.
+
+**Вариант А — с Windows-машины** (сам подключится, склонирует и всё настроит):
+```powershell
+.\deploy.ps1 -Server <IP-сервера>
+# свой домен:  .\deploy.ps1 -Server <IP> -Domain voice.example.com
+```
+Пароль спросит при запуске (в скрипте он не хранится). Модуль Posh-SSH поставится сам.
+
+**Вариант Б — прямо на сервере** (по SSH зашёл руками):
+```bash
+apt update && apt install -y git
+git clone https://github.com/srzhn/depeche.git /opt/depeche
+cd /opt/depeche
+./scripts/provision.sh            # свой домен: DOMAIN=voice.example.com ./scripts/provision.sh
+```
+
+`provision.sh` идемпотентно поднимает всё: swap, Docker, docker compose, `.env` (с генерацией
+TURN-секрета), сборку и запуск. Повторный запуск безопасен. Без своего домена берётся
+бесплатный `<публичный-IP>.sslip.io` с настоящим HTTPS.
+
+Дальше — открывай `https://<домен>/`. Ручные шаги ниже нужны, только если хочешь всё по частям.
+
+---
+
+### Ручная установка (по шагам)
 
 ### 1. Что нужно заранее
 
