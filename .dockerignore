@@ -1,0 +1,8 @@
+**/node_modules
+web/dist
+dist
+.git
+.env
+*.log
+caddy_data
+caddy_config
