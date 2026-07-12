@@ -5,6 +5,8 @@
 // эквалайзер, компрессор, эффект, гейт, мут, смена устройства/режима) меняют граф без
 // replaceTrack в mesh.
 
+import { createRnnoiseNode } from './rnnoise';
+
 export type VoiceEffect = 'none' | 'soft' | 'hard' | 'megaphone';
 
 export interface AudioSettings {
@@ -22,6 +24,7 @@ export interface AudioSettings {
   eqHigh: number;
   compressor: boolean;
   effect: VoiceEffect;
+  rnnoise: boolean;
 }
 
 export const DEFAULT_SETTINGS: AudioSettings = {
@@ -39,6 +42,7 @@ export const DEFAULT_SETTINGS: AudioSettings = {
   eqHigh: 0,
   compressor: false,
   effect: 'none',
+  rnnoise: false,
 };
 
 const LS_KEY = 'depeche:audio';
@@ -90,6 +94,7 @@ export class LocalAudio {
   private ctx: AudioContext | null = null;
   private raw: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
+  private rnnoiseNode: AudioNode | null = null;
   private eqLow: BiquadFilterNode | null = null;
   private eqMid: BiquadFilterNode | null = null;
   private eqHigh: BiquadFilterNode | null = null;
@@ -181,8 +186,34 @@ export class LocalAudio {
     if (this.raw) this.raw.getTracks().forEach((t) => t.stop());
     this.raw = stream;
     this.source = this.ctx.createMediaStreamSource(stream);
-    this.source.connect(this.eqLow!);
-    this.source.connect(this.analyser!); // отвод для гейта и индикатора речи
+    await this.wireSource();
+  }
+
+  // source → [RNNoise] → eqLow, плюс отвод в analyser (для гейта и индикатора речи).
+  private async wireSource(): Promise<void> {
+    if (!this.source || !this.ctx || !this.eqLow) return;
+    try { this.source.disconnect(); } catch { /* ignore */ }
+    this.source.connect(this.analyser!);
+    if (this.settings.rnnoise) {
+      try {
+        if (!this.rnnoiseNode) this.rnnoiseNode = await createRnnoiseNode(this.ctx);
+        this.source.connect(this.rnnoiseNode);
+        this.rnnoiseNode.connect(this.eqLow);
+        return;
+      } catch (err) {
+        console.error('[rnnoise] не удалось загрузить, откатываю на обычный звук', err);
+        this.settings.rnnoise = false;
+        this.persist();
+      }
+    }
+    if (this.rnnoiseNode) { try { this.rnnoiseNode.disconnect(); } catch { /* ignore */ } }
+    this.source.connect(this.eqLow);
+  }
+
+  async setRnnoise(on: boolean): Promise<void> {
+    this.settings.rnnoise = on;
+    this.persist();
+    if (this.ctx && this.source) await this.wireSource();
   }
 
   private applyEq(): void {
@@ -279,7 +310,7 @@ export class LocalAudio {
     this.rafId = 0;
     if (this.raw) this.raw.getTracks().forEach((t) => t.stop());
     try { this.ctx?.close(); } catch { /* ignore */ }
-    this.ctx = null; this.raw = null; this.source = null; this.speaking = false;
+    this.ctx = null; this.raw = null; this.source = null; this.rnnoiseNode = null; this.speaking = false;
   }
 }
 

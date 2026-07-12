@@ -43,6 +43,11 @@ export function Settings({ api, onClose }: { api: DepecheApi; onClose: () => voi
           <span>Авто-громкость (AGC)</span>
           <input type="checkbox" checked={s.autoGainControl} onChange={(e) => api.setAutoGainControl(e.target.checked)} />
         </label>
+        <label className="row toggle">
+          <span>RNNoise — сильный шумодав (нейросеть)</span>
+          <input type="checkbox" checked={s.rnnoise} onChange={(e) => api.setRnnoise(e.target.checked)} />
+        </label>
+        <p className="hint2">Экспериментально: давит шум сильнее, но грузит процессор — на слабых устройствах звук может «крошиться».</p>
 
         <label className="row slider">
           <span>Усиление микрофона: {Math.round(s.micGain * 100)}%</span>

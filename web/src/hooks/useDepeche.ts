@@ -67,6 +67,7 @@ export interface DepecheApi {
   setEchoCancellation: (on: boolean) => void;
   setNoiseSuppression: (on: boolean) => void;
   setAutoGainControl: (on: boolean) => void;
+  setRnnoise: (on: boolean) => void;
   setGuestVolume: (id: string, v: number) => void;
   toggleGuestMute: (id: string) => void;
   setEq: (low: number, mid: number, high: number) => void;
@@ -388,6 +389,7 @@ export function useDepeche(): DepecheApi {
   const setEchoCancellation = (on: boolean) => { void audioRef.current!.setEchoCancellation(on).then(syncSettings); };
   const setNoiseSuppression = (on: boolean) => { void audioRef.current!.setNoiseSuppression(on).then(syncSettings); };
   const setAutoGainControl = (on: boolean) => { void audioRef.current!.setAutoGainControl(on).then(syncSettings); };
+  const setRnnoise = (on: boolean) => { void audioRef.current!.setRnnoise(on).then(syncSettings); };
   const setEq = (low: number, mid: number, high: number) => { audioRef.current!.setEq(low, mid, high); syncSettings(); };
   const setCompressor = (on: boolean) => { audioRef.current!.setCompressor(on); syncSettings(); };
   const setEffect = (e: VoiceEffect) => { audioRef.current!.setEffect(e); syncSettings(); };
@@ -452,7 +454,7 @@ export function useDepeche(): DepecheApi {
     clearLobbyError: () => setLobbyError(null),
     toggleMute, sendChat, enableAudio, onAudioBlocked, refreshDevices,
     setMicGain, setGate, setMonitor, setMicDevice, setOutputDevice,
-    setEchoCancellation, setNoiseSuppression, setAutoGainControl,
+    setEchoCancellation, setNoiseSuppression, setAutoGainControl, setRnnoise,
     setGuestVolume, toggleGuestMute,
     setEq, setCompressor, setEffect,
     recording, recordSupported: Recorder.supported(), toggleRecording,
