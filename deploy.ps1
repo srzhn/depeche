@@ -27,7 +27,7 @@
   Каталог на сервере (по умолчанию /opt/depeche).
 
 .EXAMPLE
-  .\deploy.ps1 -Server 77.221.145.97
+  .\deploy.ps1 -Server 1.2.3.4
 
 .EXAMPLE
   .\deploy.ps1 -Server 1.2.3.4 -Domain voice.example.com

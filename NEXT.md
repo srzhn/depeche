@@ -37,7 +37,6 @@
 ## Как продолжить
 
 Локально (нужен Node): `npm start` (сервер :3000) + `cd web && npm run dev` (Vite :5173).
-Деплой — `docker compose up -d --build` на VPS `77.221.145.97` (см. [README.md](README.md)).
-Живой адрес: https://77.221.145.97.sslip.io/
+Деплой — `docker compose up -d --build` на VPS (см. [README.md](README.md)).
 Ключевые файлы: движок звука [web/src/lib/audio.ts](web/src/lib/audio.ts), сигналинг
 [server/signaling.js](server/signaling.js), хук [web/src/hooks/useDepeche.ts](web/src/hooks/useDepeche.ts).
