@@ -48,7 +48,12 @@ export type ServerMessage =
   | { type: 'chat'; id: string; name: string; text: string; ts: number }
   | { type: 'chat-history'; messages: ChatMsg[] }
   | { type: 'join-denied'; reason: 'gone' | 'password' | 'full'; room: string }
-  | { type: 'create-denied'; reason: 'exists' | 'limit' };
+  | { type: 'create-denied'; reason: 'exists' | 'limit' }
+  | { type: 'knock'; id: string; name: string }
+  | { type: 'knock-sent'; room: string }
+  | { type: 'knock-cancel'; id: string }
+  | { type: 'knock-declined' }
+  | { type: 'knock-failed'; reason: 'gone' | 'empty' | 'full' };
 
 // Сообщения клиент → сервер.
 export type ClientMessage =
@@ -59,4 +64,7 @@ export type ClientMessage =
   | { type: 'signal'; to: string; data: SignalData }
   | { type: 'rename'; name: string }
   | { type: 'state'; muted: boolean }
-  | { type: 'chat'; text: string };
+  | { type: 'chat'; text: string }
+  | { type: 'knock'; room: string; name: string }
+  | { type: 'admit'; id: string }
+  | { type: 'decline'; id: string };

@@ -13,7 +13,7 @@ export function ControlBar({ muted, noise, pushToTalk, onMute, onNoise, onLeave 
     <div className="controls-wrap">
       <div className="controls">
         <button className={muteCls} onClick={onMute} aria-pressed={muted}
-          title="Заглушить микрофон (или зажми пробел для push-to-talk)">
+          title="Заглушить микрофон — клавиша M (или зажми Пробел для push-to-talk)">
           <span className="ico">{muted ? '🔇' : '🎤'}</span>
           <span className="lbl">{pushToTalk ? 'Говорю…' : muted ? 'Вкл. звук' : 'Микрофон'}</span>
         </button>

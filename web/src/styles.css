@@ -447,3 +447,14 @@ input[type="checkbox"] { accent-color: var(--accent-strong); width: 18px; height
 .seg.small button { padding: 6px 10px; font-size: 12px; }
 .seg.small, .seg.wrap { flex-wrap: wrap; }
 .settings button.rec { background: var(--red); color: #fff; }
+
+/* «Постучаться» */
+.knock-banner {
+  width: 100%; max-width: 620px; display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 10px 14px; border-radius: 12px; font-size: 14px;
+  background: rgba(242, 179, 75, 0.14); border: 1px solid var(--amber);
+}
+.knock-actions { display: flex; gap: 8px; flex: none; }
+.knock-actions .primary.sm { flex: none; }
+.knock-wait { text-align: center; }
+.knock-wait h3 { margin: 0; }

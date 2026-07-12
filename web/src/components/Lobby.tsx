@@ -106,6 +106,16 @@ export function Lobby({ api }: { api: DepecheApi }) {
               <button className="primary sm" onClick={submitPassword} disabled={api.busy}>Войти</button>
               <button className="ghost sm" onClick={api.dismissPasswordPrompt}>Отмена</button>
             </div>
+            <button className="ghost sm" onClick={() => api.passwordPrompt && api.knock(api.passwordPrompt)}>🔔 Постучаться (без пароля)</button>
+          </div>
+        </div>
+      )}
+
+      {api.knocking && (
+        <div className="modal-backdrop">
+          <div className="modal knock-wait">
+            <h3>🔔 Стучимся в «{api.knocking}»…</h3>
+            <p className="hint2">Ждём, когда кто-нибудь внутри впустит.</p>
           </div>
         </div>
       )}

@@ -17,8 +17,9 @@ const MAX_NAME = 32;
 const MAX_ROOM = 40;
 const MAX_TEXT = 500;
 
-const rooms = new Map();  // name -> Room
-const lobby = new Set();  // ws, находящиеся в лобби (не в комнате)
+const rooms = new Map();    // name -> Room
+const lobby = new Set();    // ws, находящиеся в лобби (не в комнате)
+const clients = new Map();  // id -> ws (для «постучаться»)
 
 function send(ws, msg) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
@@ -70,18 +71,21 @@ export function attachSignaling(server) {
   wss.on('connection', (ws) => {
     ws.id = crypto.randomUUID();
     ws.room = null;
+    ws.knockRoom = null;
     ws.isAlive = true;
     lobby.add(ws);
+    clients.set(ws.id, ws);
     send(ws, roomsPayload());
 
+    const onGone = () => { clients.delete(ws.id); cancelKnock(ws); lobby.delete(ws); leaveRoom(ws, false); };
     ws.on('pong', () => { ws.isAlive = true; });
     ws.on('message', (raw) => {
       let msg;
       try { msg = JSON.parse(raw); } catch { return; }
       if (msg && typeof msg.type === 'string') handle(ws, msg);
     });
-    ws.on('close', () => { lobby.delete(ws); leaveRoom(ws, false); });
-    ws.on('error', () => { lobby.delete(ws); leaveRoom(ws, false); });
+    ws.on('close', onGone);
+    ws.on('error', onGone);
   });
 
   const interval = setInterval(() => {
@@ -106,6 +110,9 @@ function handle(ws, msg) {
     case 'rename': return rename(ws, msg);
     case 'state': return updateState(ws, msg);
     case 'chat': return chat(ws, msg);
+    case 'knock': return knock(ws, msg);
+    case 'admit': return admitKnock(ws, msg);
+    case 'decline': return declineKnock(ws, msg);
     default: /* ignore */
   }
 }
@@ -194,6 +201,50 @@ function chat(ws, { text }) {
   if (r.messages.length > MAX_CHAT) r.messages.shift();
   const payload = { type: 'chat', ...msg };
   for (const [, p] of r.peers) send(p.ws, payload);
+}
+
+// «Постучаться» в комнату: лобби-клиент просит впустить; любой участник впускает без пароля.
+function knock(ws, { room, name }) {
+  const roomName = sanitizeRoom(room);
+  const r = rooms.get(roomName);
+  if (!r) return send(ws, { type: 'knock-failed', reason: 'gone' });
+  if (r.peers.size === 0) return send(ws, { type: 'knock-failed', reason: 'empty' });
+  if (r.peers.size >= MAX_PEERS) return send(ws, { type: 'knock-failed', reason: 'full' });
+  ws.name = sanitizeName(name);
+  ws.knockRoom = roomName;
+  for (const [, p] of r.peers) send(p.ws, { type: 'knock', id: ws.id, name: ws.name });
+  send(ws, { type: 'knock-sent', room: roomName });
+}
+
+function admitKnock(ws, { id }) {
+  if (!ws.room) return;
+  const r = rooms.get(ws.room);
+  if (!r) return;
+  const knocker = clients.get(id);
+  if (!knocker || knocker.room || knocker.knockRoom !== ws.room) return;
+  if (r.peers.size >= MAX_PEERS) return send(knocker, { type: 'knock-failed', reason: 'full' });
+  knocker.knockRoom = null;
+  for (const [pid, p] of r.peers) if (pid !== ws.id) send(p.ws, { type: 'knock-cancel', id });
+  admit(knocker, r, knocker.name);
+}
+
+function declineKnock(ws, { id }) {
+  if (!ws.room) return;
+  const knocker = clients.get(id);
+  if (knocker && knocker.knockRoom === ws.room) {
+    knocker.knockRoom = null;
+    send(knocker, { type: 'knock-declined' });
+    const r = rooms.get(ws.room);
+    if (r) for (const [pid, p] of r.peers) if (pid !== ws.id) send(p.ws, { type: 'knock-cancel', id });
+  }
+}
+
+function cancelKnock(ws) {
+  if (!ws.knockRoom) return;
+  const r = rooms.get(ws.knockRoom);
+  const kid = ws.id;
+  ws.knockRoom = null;
+  if (r) for (const [, p] of r.peers) send(p.ws, { type: 'knock-cancel', id: kid });
 }
 
 function leaveRoom(ws, backToLobby) {

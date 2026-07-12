@@ -43,6 +43,16 @@ export function Room({ api }: { api: DepecheApi }) {
         </div>
       </header>
 
+      {api.knockRequests.map((k) => (
+        <div className="knock-banner" key={k.id}>
+          <span>🔔 <strong>{k.name}</strong> стучится</span>
+          <div className="knock-actions">
+            <button className="primary sm" onClick={() => api.admit(k.id)}>Впустить</button>
+            <button className="ghost sm" onClick={() => api.decline(k.id)}>Отклонить</button>
+          </div>
+        </div>
+      ))}
+
       <ul className="tiles">
         {api.participants.map((p) => (
           <ParticipantTile

@@ -51,6 +51,11 @@ export interface DepecheApi {
   enterRoom: (room: string, password?: string) => void;
   createRoom: (room: string, password?: string) => void;
   leaveRoom: () => void;
+  knockRequests: { id: string; name: string }[];
+  knocking: string | null;
+  knock: (room: string) => void;
+  admit: (id: string) => void;
+  decline: (id: string) => void;
   promptPassword: (room: string) => void;
   dismissPasswordPrompt: () => void;
   clearLobbyError: () => void;
@@ -129,6 +134,8 @@ export function useDepeche(): DepecheApi {
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [playNonce, setPlayNonce] = useState(0);
   const [devices, setDevices] = useState<DeviceList>({ mics: [], outputs: [] });
+  const [knockRequests, setKnockRequests] = useState<{ id: string; name: string }[]>([]);
+  const [knocking, setKnocking] = useState<string | null>(null);
 
   const audioRef = useRef<LocalAudio>();
   if (!audioRef.current) audioRef.current = new LocalAudio();
@@ -215,6 +222,8 @@ export function useDepeche(): DepecheApi {
     for (const [id, stop] of detectorsRef.current) { stop(); detectorsRef.current.delete(id); }
     dispatch({ type: 'clear' });
     setMessages([]);
+    setKnocking(null);
+    setKnockRequests([]);
     addParticipant(m.selfId, nameRef.current, audioRef.current!.muted, true);
     for (const p of m.peers) { addParticipant(p.id, p.name, p.muted, false); mesh.connect(p.id); }
     signalingRef.current!.send({ type: 'state', muted: audioRef.current!.muted });
@@ -237,6 +246,7 @@ export function useDepeche(): DepecheApi {
       case 'peer-joined':
         if (!mesh) break;
         addParticipant(m.id, m.name, m.muted, false);
+        setKnockRequests((prev) => prev.filter((k) => k.id !== m.id));
         mesh.connect(m.id);
         beep('in'); flashNotice(`${m.name} зашёл`);
         break;
@@ -272,6 +282,23 @@ export function useDepeche(): DepecheApi {
       case 'create-denied':
         setBusy(false);
         setLobbyError(m.reason === 'limit' ? 'Достигнут лимит комнат (4).' : 'Комната с таким именем уже есть.');
+        break;
+      case 'knock':
+        setKnockRequests((prev) => prev.some((k) => k.id === m.id) ? prev : [...prev, { id: m.id, name: m.name }]);
+        beep('in'); flashNotice(`${m.name} стучится`);
+        break;
+      case 'knock-cancel':
+        setKnockRequests((prev) => prev.filter((k) => k.id !== m.id));
+        break;
+      case 'knock-sent':
+        break;
+      case 'knock-declined':
+        setKnocking(null);
+        setLobbyError('Тебя не впустили в комнату.');
+        break;
+      case 'knock-failed':
+        setKnocking(null);
+        setLobbyError(m.reason === 'empty' ? 'В комнате никого нет — некому впустить.' : m.reason === 'full' ? 'Комната заполнена.' : 'Комнаты уже нет.');
         break;
     }
   };
@@ -342,6 +369,23 @@ export function useDepeche(): DepecheApi {
     signalingRef.current?.send({ type: 'create', room: roomName, name: nameRef.current, password: password || undefined });
   };
 
+  const knock = async (room: string) => {
+    if (!nameRef.current.trim()) { setLobbyError('Сначала введи имя.'); return; }
+    setLobbyError(null); setPasswordPrompt(null);
+    setKnocking(room);
+    if (!(await ensureReady())) { setKnocking(null); return; }
+    pendingPasswordRef.current = '';
+    signalingRef.current?.send({ type: 'knock', room, name: nameRef.current });
+  };
+  const admit = (id: string) => {
+    setKnockRequests((prev) => prev.filter((k) => k.id !== id));
+    signalingRef.current?.send({ type: 'admit', id });
+  };
+  const decline = (id: string) => {
+    setKnockRequests((prev) => prev.filter((k) => k.id !== id));
+    signalingRef.current?.send({ type: 'decline', id });
+  };
+
   const applyMuted = (m: boolean) => {
     audioRef.current!.setMuted(m);
     setMutedState(m);
@@ -368,6 +412,7 @@ export function useDepeche(): DepecheApi {
     roomPasswordRef.current = '';
     dispatch({ type: 'clear' });
     setMessages([]);
+    setKnockRequests([]); setKnocking(null);
     setCurrentRoom(''); setRoomLocked(false);
     setPushToTalk(false); setAutoplayBlocked(false);
     setMutedState(false); audioRef.current!.muted = false;
@@ -449,6 +494,7 @@ export function useDepeche(): DepecheApi {
     muted, pushToTalk, busy, lobbyError, passwordPrompt, notice, autoplayBlocked, playNonce,
     settings, devices,
     enterRoom, createRoom, leaveRoom,
+    knockRequests, knocking, knock, admit, decline,
     promptPassword: (room: string) => { setLobbyError(null); setPasswordPrompt(room); },
     dismissPasswordPrompt: () => { setPasswordPrompt(null); setLobbyError(null); },
     clearLobbyError: () => setLobbyError(null),
