@@ -409,3 +409,33 @@ body {
   .screen.room { padding: 12px; }
   .rooms-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ─────────── Панель настроек звука ─────────── */
+input[type="range"] { accent-color: var(--accent); }
+input[type="checkbox"] { accent-color: var(--accent-strong); width: 18px; height: 18px; }
+
+.modal.settings { max-width: 420px; max-height: 85vh; overflow-y: auto; gap: 14px; }
+.settings-head { display: flex; align-items: center; justify-content: space-between; }
+.settings-head h3 { margin: 0; }
+.settings .x { background: none; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; }
+.settings .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.settings .row > span { font-size: 14px; }
+.settings select {
+  flex: 1; max-width: 58%; padding: 8px 10px; font-size: 13px;
+  color: var(--text); background: var(--bg-elev-2); border: 1px solid var(--border); border-radius: 8px;
+}
+.settings .row.slider { flex-direction: column; align-items: stretch; gap: 6px; }
+.settings .row.slider span { font-size: 13px; color: var(--text-dim); }
+.settings .row.slider input[type="range"] { width: 100%; }
+.settings .hint2 { font-size: 12px; color: var(--text-dim); margin: -6px 0 0; }
+.seg { display: flex; gap: 6px; }
+.seg button {
+  padding: 7px 10px; font-size: 13px; cursor: pointer;
+  color: var(--text); background: var(--bg-elev-2); border: 1px solid var(--border); border-radius: 8px;
+}
+.seg button.on { background: rgba(108, 140, 255, 0.18); border-color: var(--accent); }
+
+/* Громкость гостя на плитке */
+.tile-vol { display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 2px; }
+.tile-vol input[type="range"] { flex: 1; height: 4px; }
+.vmute { flex: none; background: none; border: none; cursor: pointer; font-size: 14px; padding: 0; line-height: 1; }
