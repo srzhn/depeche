@@ -439,3 +439,11 @@ input[type="checkbox"] { accent-color: var(--accent-strong); width: 18px; height
 .tile-vol { display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 2px; }
 .tile-vol input[type="range"] { flex: 1; height: 4px; }
 .vmute { flex: none; background: none; border: none; cursor: pointer; font-size: 14px; padding: 0; line-height: 1; }
+
+.settings .sep {
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim);
+  border-top: 1px solid var(--border); padding-top: 12px; margin-top: 2px;
+}
+.seg.small button { padding: 6px 10px; font-size: 12px; }
+.seg.small, .seg.wrap { flex-wrap: wrap; }
+.settings button.rec { background: var(--red); color: #fff; }

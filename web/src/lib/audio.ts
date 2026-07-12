@@ -1,18 +1,27 @@
 // Аудио-движок: локальный микрофон проходит через граф Web Audio
-//   source → gain(усиление) → gate(шумовой гейт) → mute → { исходящий трек, монитор }
-// Исходящий трек берётся из MediaStreamDestination и СТАБИЛЕН: громкость, гейт, мут,
-// смена устройства/режима меняются внутри графа без replaceTrack в mesh.
+//   source → EQ(low/mid/high) → compressor → эффект(waveshaper) → gain → gate → mute
+//            → { исходящий трек (dest), монитор }
+// Исходящий трек берётся из MediaStreamDestination и СТАБИЛЕН: все правки (громкость,
+// эквалайзер, компрессор, эффект, гейт, мут, смена устройства/режима) меняют граф без
+// replaceTrack в mesh.
+
+export type VoiceEffect = 'none' | 'soft' | 'hard' | 'megaphone';
 
 export interface AudioSettings {
   micDeviceId: string;
   outputDeviceId: string;
-  echoCancellation: boolean;  // режим: колонки=true (AEC), наушники=false
-  noiseSuppression: boolean;  // браузерный шумодав
+  echoCancellation: boolean;
+  noiseSuppression: boolean;
   autoGainControl: boolean;
-  micGain: number;            // 0..2 (усиление, в т.ч. буст >100%)
+  micGain: number;            // 0..2
   gateEnabled: boolean;
-  gateThreshold: number;      // 0..0.2 (RMS)
-  monitor: boolean;           // «слушать себя»
+  gateThreshold: number;      // 0..0.2
+  monitor: boolean;
+  eqLow: number;              // dB -12..12
+  eqMid: number;
+  eqHigh: number;
+  compressor: boolean;
+  effect: VoiceEffect;
 }
 
 export const DEFAULT_SETTINGS: AudioSettings = {
@@ -25,6 +34,11 @@ export const DEFAULT_SETTINGS: AudioSettings = {
   gateEnabled: false,
   gateThreshold: 0.02,
   monitor: false,
+  eqLow: 0,
+  eqMid: 0,
+  eqHigh: 0,
+  compressor: false,
+  effect: 'none',
 };
 
 const LS_KEY = 'depeche:audio';
@@ -48,6 +62,26 @@ function raceTimeout<T>(p: Promise<T>, ms: number, msg: string): Promise<T> {
   ]);
 }
 
+// Классическая кривая дисторшна для WaveShaper.
+function distortionCurve(k: number): Float32Array {
+  const n = 4096;
+  const curve = new Float32Array(n);
+  const deg = Math.PI / 180;
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / n - 1;
+    curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+  }
+  return curve;
+}
+function effectCurve(effect: VoiceEffect): Float32Array | null {
+  switch (effect) {
+    case 'soft': return distortionCurve(6);
+    case 'hard': return distortionCurve(40);
+    case 'megaphone': return distortionCurve(120);
+    default: return null;
+  }
+}
+
 export class LocalAudio {
   settings: AudioSettings;
   muted = false;
@@ -56,6 +90,11 @@ export class LocalAudio {
   private ctx: AudioContext | null = null;
   private raw: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
+  private eqLow: BiquadFilterNode | null = null;
+  private eqMid: BiquadFilterNode | null = null;
+  private eqHigh: BiquadFilterNode | null = null;
+  private comp: DynamicsCompressorNode | null = null;
+  private shaper: WaveShaperNode | null = null;
   private gain: GainNode | null = null;
   private gate: GainNode | null = null;
   private muteGain: GainNode | null = null;
@@ -70,12 +109,8 @@ export class LocalAudio {
     this.settings = { ...loadSettings(), ...settings };
   }
 
-  get stream(): MediaStream | null {
-    return this.dest ? this.dest.stream : null;
-  }
-  get track(): MediaStreamTrack | null {
-    return this.dest ? this.dest.stream.getAudioTracks()[0] ?? null : null;
-  }
+  get stream(): MediaStream | null { return this.dest ? this.dest.stream : null; }
+  get track(): MediaStreamTrack | null { return this.dest ? this.dest.stream.getAudioTracks()[0] ?? null : null; }
 
   private micConstraints(): MediaStreamConstraints {
     const s = this.settings;
@@ -94,6 +129,11 @@ export class LocalAudio {
     this.ctx = ctx;
     if (ctx.state === 'suspended') await ctx.resume().catch(() => {});
 
+    this.eqLow = ctx.createBiquadFilter();
+    this.eqMid = ctx.createBiquadFilter();
+    this.eqHigh = ctx.createBiquadFilter();
+    this.comp = ctx.createDynamicsCompressor();
+    this.shaper = ctx.createWaveShaper();
     this.gain = ctx.createGain();
     this.gate = ctx.createGain();
     this.muteGain = ctx.createGain();
@@ -103,12 +143,21 @@ export class LocalAudio {
     this.analyser.fftSize = 512;
     this.buf = new Uint8Array(this.analyser.fftSize);
 
+    // фиксированная цепочка (всё нейтрализуется настройками)
+    this.eqLow.connect(this.eqMid);
+    this.eqMid.connect(this.eqHigh);
+    this.eqHigh.connect(this.comp);
+    this.comp.connect(this.shaper);
+    this.shaper.connect(this.gain);
     this.gain.connect(this.gate);
     this.gate.connect(this.muteGain);
     this.muteGain.connect(this.dest);
     this.muteGain.connect(this.monitorGain);
     this.monitorGain.connect(ctx.destination);
 
+    this.applyEq();
+    this.applyCompressor();
+    this.applyEffect();
     this.gain.gain.value = this.settings.micGain;
     this.gate.gain.value = 1;
     this.muteGain.gain.value = this.muted ? 0 : 1;
@@ -132,8 +181,27 @@ export class LocalAudio {
     if (this.raw) this.raw.getTracks().forEach((t) => t.stop());
     this.raw = stream;
     this.source = this.ctx.createMediaStreamSource(stream);
-    this.source.connect(this.gain!);
+    this.source.connect(this.eqLow!);
     this.source.connect(this.analyser!); // отвод для гейта и индикатора речи
+  }
+
+  private applyEq(): void {
+    if (!this.eqLow || !this.eqMid || !this.eqHigh) return;
+    this.eqLow.type = 'lowshelf'; this.eqLow.frequency.value = 220; this.eqLow.gain.value = this.settings.eqLow;
+    this.eqMid.type = 'peaking'; this.eqMid.frequency.value = 1200; this.eqMid.Q.value = 1; this.eqMid.gain.value = this.settings.eqMid;
+    this.eqHigh.type = 'highshelf'; this.eqHigh.frequency.value = 3500; this.eqHigh.gain.value = this.settings.eqHigh;
+  }
+  private applyCompressor(): void {
+    if (!this.comp) return;
+    const c = this.comp;
+    if (this.settings.compressor) {
+      c.threshold.value = -24; c.knee.value = 30; c.ratio.value = 4; c.attack.value = 0.003; c.release.value = 0.25;
+    } else {
+      c.threshold.value = 0; c.knee.value = 0; c.ratio.value = 1; c.attack.value = 0.003; c.release.value = 0.25;
+    }
+  }
+  private applyEffect(): void {
+    if (this.shaper) { this.shaper.curve = effectCurve(this.settings.effect); this.shaper.oversample = '2x'; }
   }
 
   private startLoop(): void {
@@ -159,7 +227,6 @@ export class LocalAudio {
     if (m && this.speaking) { this.speaking = false; this.onSpeaking?.(false); }
     return m;
   }
-
   setMicGain(v: number): void {
     this.settings.micGain = v;
     if (this.gain && this.ctx) this.gain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
@@ -175,29 +242,34 @@ export class LocalAudio {
     if (this.monitorGain && this.ctx) this.monitorGain.gain.setTargetAtTime(on ? 1 : 0, this.ctx.currentTime, 0.02);
     this.persist();
   }
+  setEq(low: number, mid: number, high: number): void {
+    this.settings.eqLow = low; this.settings.eqMid = mid; this.settings.eqHigh = high;
+    this.applyEq(); this.persist();
+  }
+  setCompressor(on: boolean): void {
+    this.settings.compressor = on; this.applyCompressor(); this.persist();
+  }
+  setEffect(effect: VoiceEffect): void {
+    this.settings.effect = effect; this.applyEffect(); this.persist();
+  }
   async setMicDevice(id: string): Promise<void> {
-    this.settings.micDeviceId = id;
-    this.persist();
+    this.settings.micDeviceId = id; this.persist();
     if (this.ctx) await this.acquireRaw();
   }
   async setEchoCancellation(on: boolean): Promise<void> {
-    this.settings.echoCancellation = on;
-    this.persist();
+    this.settings.echoCancellation = on; this.persist();
     if (this.ctx) await this.acquireRaw();
   }
   async setNoiseSuppression(on: boolean): Promise<void> {
-    this.settings.noiseSuppression = on;
-    this.persist();
+    this.settings.noiseSuppression = on; this.persist();
     if (this.ctx) await this.acquireRaw();
   }
   async setAutoGainControl(on: boolean): Promise<void> {
-    this.settings.autoGainControl = on;
-    this.persist();
+    this.settings.autoGainControl = on; this.persist();
     if (this.ctx) await this.acquireRaw();
   }
   setOutputDevice(id: string): void {
-    this.settings.outputDeviceId = id;
-    this.persist();
+    this.settings.outputDeviceId = id; this.persist();
   }
 
   private persist() { saveSettings(this.settings); }
@@ -207,12 +279,10 @@ export class LocalAudio {
     this.rafId = 0;
     if (this.raw) this.raw.getTracks().forEach((t) => t.stop());
     try { this.ctx?.close(); } catch { /* ignore */ }
-    this.ctx = null; this.raw = null; this.source = null;
-    this.speaking = false;
+    this.ctx = null; this.raw = null; this.source = null; this.speaking = false;
   }
 }
 
-// Человекочитаемый текст ошибки доступа к микрофону.
 export function micErrorText(err: unknown): string {
   const name = (err as { name?: string })?.name;
   switch (name) {
@@ -230,7 +300,6 @@ export function micErrorText(err: unknown): string {
   }
 }
 
-// Детектор речи для УДАЛЁННЫХ участников (общий AudioContext).
 let sharedCtx: AudioContext | null = null;
 function getAudioContext(): AudioContext | null {
   const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -268,7 +337,6 @@ export function createSpeakingDetector(
   };
 }
 
-// Список аудио-устройств (микрофоны и выводы). Метки видны только после getUserMedia.
 export async function listDevices(): Promise<{ mics: MediaDeviceInfo[]; outputs: MediaDeviceInfo[] }> {
   try {
     const all = await navigator.mediaDevices.enumerateDevices();

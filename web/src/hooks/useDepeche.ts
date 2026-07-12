@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { LocalAudio, createSpeakingDetector, micErrorText, listDevices, type AudioSettings } from '../lib/audio';
+import { LocalAudio, createSpeakingDetector, micErrorText, listDevices, type AudioSettings, type VoiceEffect } from '../lib/audio';
+import { Recorder } from '../lib/record';
 import { Signaling, type SignalStatus } from '../lib/signaling';
 import { Mesh } from '../lib/rtc';
 import { fetchIceServers } from '../lib/ice';
@@ -68,6 +69,12 @@ export interface DepecheApi {
   setAutoGainControl: (on: boolean) => void;
   setGuestVolume: (id: string, v: number) => void;
   toggleGuestMute: (id: string) => void;
+  setEq: (low: number, mid: number, high: number) => void;
+  setCompressor: (on: boolean) => void;
+  setEffect: (e: VoiceEffect) => void;
+  recording: boolean;
+  recordSupported: boolean;
+  toggleRecording: () => void;
 }
 
 type PState = Record<string, Participant>;
@@ -124,6 +131,9 @@ export function useDepeche(): DepecheApi {
 
   const audioRef = useRef<LocalAudio>();
   if (!audioRef.current) audioRef.current = new LocalAudio();
+  const recorderRef = useRef<Recorder>();
+  if (!recorderRef.current) recorderRef.current = new Recorder();
+  const [recording, setRecording] = useState(false);
   const [settings, setSettings] = useState<AudioSettings>(() => audioRef.current!.settings);
   const syncSettings = () => setSettings({ ...audioRef.current!.settings });
 
@@ -346,6 +356,8 @@ export function useDepeche(): DepecheApi {
   };
 
   const leaveRoom = () => {
+    recorderRef.current?.stop();
+    setRecording(false);
     try { signalingRef.current?.send({ type: 'leave' }); } catch { /* ignore */ }
     meshRef.current?.reset(); meshRef.current = null;
     stopAllDetectors();
@@ -376,6 +388,16 @@ export function useDepeche(): DepecheApi {
   const setEchoCancellation = (on: boolean) => { void audioRef.current!.setEchoCancellation(on).then(syncSettings); };
   const setNoiseSuppression = (on: boolean) => { void audioRef.current!.setNoiseSuppression(on).then(syncSettings); };
   const setAutoGainControl = (on: boolean) => { void audioRef.current!.setAutoGainControl(on).then(syncSettings); };
+  const setEq = (low: number, mid: number, high: number) => { audioRef.current!.setEq(low, mid, high); syncSettings(); };
+  const setCompressor = (on: boolean) => { audioRef.current!.setCompressor(on); syncSettings(); };
+  const setEffect = (e: VoiceEffect) => { audioRef.current!.setEffect(e); syncSettings(); };
+  const toggleRecording = () => {
+    const r = recorderRef.current!;
+    if (r.recording) { r.stop(); setRecording(false); return; }
+    const remotes = Object.values(participantsRef.current).filter((p) => !p.self && p.stream).map((p) => p.stream!);
+    const ok = r.start(audioRef.current!.stream, remotes);
+    setRecording(ok);
+  };
 
   const setGuestVolume = (id: string, v: number) => {
     dispatch({ type: 'upsert', id, patch: { volume: v, pmuted: v <= 0 } });
@@ -432,6 +454,8 @@ export function useDepeche(): DepecheApi {
     setMicGain, setGate, setMonitor, setMicDevice, setOutputDevice,
     setEchoCancellation, setNoiseSuppression, setAutoGainControl,
     setGuestVolume, toggleGuestMute,
+    setEq, setCompressor, setEffect,
+    recording, recordSupported: Recorder.supported(), toggleRecording,
   };
 }
 
