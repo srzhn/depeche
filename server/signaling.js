@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 // Room = { name, peers: Map<id,{ws,name,muted}>, messages:[], passwordHash|null,
 //          isDefault, emptyTimer }
 
-const DEFAULT_ROOM = 'Общая';
+const DEFAULT_ROOM = 'Lounge';
 const MAX_ROOMS = parseInt(process.env.DEPECHE_MAX_ROOMS || '4', 10);
 const MAX_PEERS = parseInt(process.env.DEPECHE_MAX_PEERS || '6', 10);
 const EMPTY_TTL_MS = 2 * 60 * 60 * 1000; // 2 часа
