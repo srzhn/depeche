@@ -7,6 +7,10 @@
 
 import { createRnnoiseNode } from './rnnoise';
 
+// Фаза 3 (эквалайзер, компрессор, голосовые эффекты, RNNoise, запись) временно отключена.
+// Флаг гасит и UI, и применение сохранённых настроек. Вернуть — поставить true.
+export const PHASE3_ENABLED = false;
+
 export type VoiceEffect = 'none' | 'soft' | 'hard' | 'megaphone';
 
 export interface AudioSettings {
@@ -50,7 +54,13 @@ const LS_KEY = 'depeche:audio';
 export function loadSettings(): AudioSettings {
   try {
     const raw = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-    return { ...DEFAULT_SETTINGS, ...raw };
+    const s = { ...DEFAULT_SETTINGS, ...raw };
+    if (!PHASE3_ENABLED) {
+      // Нейтрализуем настройки Фазы 3, даже если они сохранены с прошлых версий.
+      s.eqLow = 0; s.eqMid = 0; s.eqHigh = 0;
+      s.compressor = false; s.effect = 'none'; s.rnnoise = false;
+    }
+    return s;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

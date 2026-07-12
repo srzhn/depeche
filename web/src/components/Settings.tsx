@@ -1,4 +1,5 @@
 import type { DepecheApi } from '../hooks/useDepeche';
+import { PHASE3_ENABLED } from '../lib/audio';
 
 export function Settings({ api, onClose }: { api: DepecheApi; onClose: () => void }) {
   const s = api.settings;
@@ -43,11 +44,6 @@ export function Settings({ api, onClose }: { api: DepecheApi; onClose: () => voi
           <span>Авто-громкость (AGC)</span>
           <input type="checkbox" checked={s.autoGainControl} onChange={(e) => api.setAutoGainControl(e.target.checked)} />
         </label>
-        <label className="row toggle">
-          <span>RNNoise — сильный шумодав (нейросеть)</span>
-          <input type="checkbox" checked={s.rnnoise} onChange={(e) => api.setRnnoise(e.target.checked)} />
-        </label>
-        <p className="hint2">Экспериментально: давит шум сильнее, но грузит процессор — на слабых устройствах звук может «крошиться».</p>
 
         <label className="row slider">
           <span>Усиление микрофона: {Math.round(s.micGain * 100)}%</span>
@@ -65,46 +61,50 @@ export function Settings({ api, onClose }: { api: DepecheApi; onClose: () => voi
           </label>
         )}
 
-        <div className="sep">Эквалайзер</div>
-        <label className="row slider">
-          <span>Низкие: {s.eqLow > 0 ? '+' : ''}{s.eqLow} дБ</span>
-          <input type="range" min={-12} max={12} step={1} value={s.eqLow} onChange={(e) => api.setEq(parseFloat(e.target.value), s.eqMid, s.eqHigh)} />
-        </label>
-        <label className="row slider">
-          <span>Средние: {s.eqMid > 0 ? '+' : ''}{s.eqMid} дБ</span>
-          <input type="range" min={-12} max={12} step={1} value={s.eqMid} onChange={(e) => api.setEq(s.eqLow, parseFloat(e.target.value), s.eqHigh)} />
-        </label>
-        <label className="row slider">
-          <span>Высокие: {s.eqHigh > 0 ? '+' : ''}{s.eqHigh} дБ</span>
-          <input type="range" min={-12} max={12} step={1} value={s.eqHigh} onChange={(e) => api.setEq(s.eqLow, s.eqMid, parseFloat(e.target.value))} />
-        </label>
-        <div className="seg small">
-          <button onClick={() => api.setEq(0, 0, 0)}>Плоско</button>
-          <button onClick={() => api.setEq(-12, 4, -8)}>Телефон</button>
-          <button onClick={() => api.setEq(4, 0, 3)}>Голос</button>
-        </div>
+        {PHASE3_ENABLED && (
+          <>
+            <div className="sep">Эквалайзер</div>
+            <label className="row slider">
+              <span>Низкие: {s.eqLow > 0 ? '+' : ''}{s.eqLow} дБ</span>
+              <input type="range" min={-12} max={12} step={1} value={s.eqLow} onChange={(e) => api.setEq(parseFloat(e.target.value), s.eqMid, s.eqHigh)} />
+            </label>
+            <label className="row slider">
+              <span>Средние: {s.eqMid > 0 ? '+' : ''}{s.eqMid} дБ</span>
+              <input type="range" min={-12} max={12} step={1} value={s.eqMid} onChange={(e) => api.setEq(s.eqLow, parseFloat(e.target.value), s.eqHigh)} />
+            </label>
+            <label className="row slider">
+              <span>Высокие: {s.eqHigh > 0 ? '+' : ''}{s.eqHigh} дБ</span>
+              <input type="range" min={-12} max={12} step={1} value={s.eqHigh} onChange={(e) => api.setEq(s.eqLow, s.eqMid, parseFloat(e.target.value))} />
+            </label>
+            <div className="seg small">
+              <button onClick={() => api.setEq(0, 0, 0)}>Плоско</button>
+              <button onClick={() => api.setEq(-12, 4, -8)}>Телефон</button>
+              <button onClick={() => api.setEq(4, 0, 3)}>Голос</button>
+            </div>
 
-        <label className="row toggle">
-          <span>Компрессор (ровнее громкость)</span>
-          <input type="checkbox" checked={s.compressor} onChange={(e) => api.setCompressor(e.target.checked)} />
-        </label>
+            <label className="row toggle">
+              <span>Компрессор (ровнее громкость)</span>
+              <input type="checkbox" checked={s.compressor} onChange={(e) => api.setCompressor(e.target.checked)} />
+            </label>
 
-        <div className="row">
-          <span>Эффект голоса</span>
-          <div className="seg small wrap">
-            <button className={s.effect === 'none' ? 'on' : ''} onClick={() => api.setEffect('none')}>Нет</button>
-            <button className={s.effect === 'soft' ? 'on' : ''} onClick={() => api.setEffect('soft')}>Хрип</button>
-            <button className={s.effect === 'hard' ? 'on' : ''} onClick={() => api.setEffect('hard')}>Жёстко</button>
-            <button className={s.effect === 'megaphone' ? 'on' : ''} onClick={() => api.setEffect('megaphone')}>Мегафон</button>
-          </div>
-        </div>
+            <div className="row">
+              <span>Эффект голоса</span>
+              <div className="seg small wrap">
+                <button className={s.effect === 'none' ? 'on' : ''} onClick={() => api.setEffect('none')}>Нет</button>
+                <button className={s.effect === 'soft' ? 'on' : ''} onClick={() => api.setEffect('soft')}>Хрип</button>
+                <button className={s.effect === 'hard' ? 'on' : ''} onClick={() => api.setEffect('hard')}>Жёстко</button>
+                <button className={s.effect === 'megaphone' ? 'on' : ''} onClick={() => api.setEffect('megaphone')}>Мегафон</button>
+              </div>
+            </div>
+          </>
+        )}
 
         <label className="row toggle">
           <span>Слушать себя (для настройки)</span>
           <input type="checkbox" checked={s.monitor} onChange={(e) => api.setMonitor(e.target.checked)} />
         </label>
 
-        {api.recordSupported && (
+        {PHASE3_ENABLED && api.recordSupported && (
           <>
             <div className="sep">Запись</div>
             <button className={api.recording ? 'primary sm rec' : 'ghost sm'} onClick={api.toggleRecording}>
