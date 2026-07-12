@@ -458,3 +458,21 @@ input[type="checkbox"] { accent-color: var(--accent-strong); width: 18px; height
 .knock-actions .primary.sm { flex: none; }
 .knock-wait { text-align: center; }
 .knock-wait h3 { margin: 0; }
+
+/* ─────────── Доводка под мобильные ─────────── */
+@media (max-width: 560px) {
+  .screen { padding: 14px; }
+  .room-header { align-items: flex-start; }
+  .room-actions { gap: 6px; }
+  .room-actions .ghost { padding: 7px 9px; font-size: 12px; }
+  .knock-banner { flex-direction: column; align-items: stretch; gap: 8px; }
+  .knock-actions { justify-content: flex-end; }
+  .modal { padding: 18px; }
+  .modal.settings { max-height: 88vh; }
+  .settings select { max-width: 54%; }
+  .chat { min-height: 96px; }
+  .lobby-head .logo { font-size: 24px; }
+}
+@media (max-width: 360px) {
+  .rooms-grid { grid-template-columns: 1fr; }
+}

@@ -1,6 +1,9 @@
 node_modules/
 dist/
 web/dist/
+web/public/icon-192.png
+web/public/icon-512.png
+web/public/apple-touch-icon.png
 .env
 *.log
 npm-debug.log*
